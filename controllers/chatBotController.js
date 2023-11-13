@@ -78,6 +78,8 @@ async function frontEndchatBot(req, res) {
     res.status(500).json({ error: 'Internal server error' });
   }
 }
+const receivedResponses = []; // Define an array to store AI responses
+
 async function getAiResponseFromKafka(req, res) {
   try {
     // Pause the consumer to prevent further messages while fetching the latest
@@ -85,6 +87,14 @@ async function getAiResponseFromKafka(req, res) {
 
     // Consume the latest message directly from Kafka using the existing consumer
     const latestResponse = await consumeLatestMessageFromKafka('ai_response');
+
+    // Store the response in the array
+    receivedResponses.push(latestResponse);
+
+    // Keep only the latest 10 responses (you can adjust this based on your needs)
+    if (receivedResponses.length > 10) {
+      receivedResponses.shift(); // Remove the oldest response
+    }
 
     // Resume the consumer after fetching the latest message
     consumer.resume();
@@ -96,6 +106,7 @@ async function getAiResponseFromKafka(req, res) {
   }
 }
 
+// Modify the consumeLatestMessageFromKafka function to resolve with the receivedResponses array
 function consumeLatestMessageFromKafka(topic) {
   return new Promise((resolve, reject) => {
     const tempConsumer = new kafka.ConsumerGroup(consumerOptions, [topic]);
@@ -109,5 +120,4 @@ function consumeLatestMessageFromKafka(topic) {
       tempConsumer.close(true, () => reject(err));
     });
   });
-}
-module.exports = { frontEndchatBot, getAiResponseFromKafka };
+}module.exports = { frontEndchatBot, getAiResponseFromKafka };
