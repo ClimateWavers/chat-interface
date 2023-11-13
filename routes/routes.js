@@ -1,5 +1,6 @@
 const express = require('express');
-const { frontEndchatBot, receiveAIResponseHandler } = require('../controllers/chatBotController');
+const frontEndchatBot = require('../controllers/frontEndchatBot');
+const receiveAIResponseHandler = require('../controllers/receiveAIResponseHandler');
 
 const router = express.Router();
 
