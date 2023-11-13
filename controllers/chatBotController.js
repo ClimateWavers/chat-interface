@@ -25,14 +25,6 @@ const consumer = new kafka.ConsumerGroup(consumerOptions, ['ai_response']);
 
 console.log('Kafka consumer is listening for messages...');
 
-const receivedResponses = [];
-
-consumer.on('message', async function (message) {
-  console.log('Received message');
-  const response = JSON.parse(message.value);
-  receivedResponses.push(response);
-});
-
 consumer.on('error', async function (err) {
   console.error('Error:', err);
 });
@@ -86,17 +78,36 @@ async function frontEndchatBot(req, res) {
     res.status(500).json({ error: 'Internal server error' });
   }
 }
-
-
 async function getAiResponseFromKafka(req, res) {
   try {
-    const lastResponse = receivedResponses.length > 0 ? receivedResponses[receivedResponses.length - 1] : null;
-    res.json({ aiResponse: lastResponse });
+    // Pause the consumer to prevent further messages while fetching the latest
+    consumer.pause();
+
+    // Consume the latest message directly from Kafka using the existing consumer
+    const latestResponse = await consumeLatestMessageFromKafka('ai_response');
+
+    // Resume the consumer after fetching the latest message
+    consumer.resume();
+
+    res.json({ aiResponse: latestResponse });
   } catch (error) {
     console.error('Error in getAiResponseFromKafka:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 }
 
+function consumeLatestMessageFromKafka(topic) {
+  return new Promise((resolve, reject) => {
+    const tempConsumer = new kafka.ConsumerGroup(consumerOptions, [topic]);
+
+    tempConsumer.on('message', (message) => {
+      const response = JSON.parse(message.value);
+      tempConsumer.close(true, () => resolve(response));
+    });
+
+    tempConsumer.on('error', (err) => {
+      tempConsumer.close(true, () => reject(err));
+    });
+  });
+}
 module.exports = { frontEndchatBot, getAiResponseFromKafka };
- 
