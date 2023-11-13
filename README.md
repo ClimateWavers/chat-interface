@@ -81,5 +81,3 @@ The Chat Interface Microservice in the ClimateWavers application serves as the c
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
-
-Feel free to reach out to [maintainer_email@example.com] with any questions or concerns. Happy coding!
