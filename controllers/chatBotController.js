@@ -1,6 +1,4 @@
-
 const kafka = require('kafka-node');
-require('dotenv').config();
 
 // Set up Kafka Producer and handle its events
 const kafkaClient = new kafka.KafkaClient({
