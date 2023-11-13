@@ -1,6 +1,5 @@
 const kafka = require('kafka-node');
 
-// Set up Kafka Producer and handle its events
 const kafkaClient = new kafka.KafkaClient({
   kafkaHost: 'zkless-kafka-bootstrap:9092',
 });
@@ -15,7 +14,6 @@ kafkaProducer.on('error', (error) => {
   console.error('Error in Kafka Producer:', error);
 });
 
-// Configuration for Kafka Consumer
 const consumerOptions = {
   kafkaHost: 'zkless-kafka-bootstrap:9092',
   groupId: 'group_1',
@@ -29,31 +27,31 @@ console.log('Kafka consumer is listening for messages...');
 
 const receivedResponses = [];
 
-// Event listener for incoming messages from Kafka
-consumer.on('message', function (message) {
+consumer.on('message', async function (message) {
   console.log('Received message');
   const response = JSON.parse(message.value);
   receivedResponses.push(response);
 });
 
-// Event listener for Kafka consumer errors
-consumer.on('error', function (err) {
+consumer.on('error', async function (err) {
   console.error('Error:', err);
 });
 
-// Event listener for Kafka consumer's offset out of range error
-consumer.on('offsetOutOfRange', function (err) {
+consumer.on('offsetOutOfRange', async function (err) {
   console.error('Offset out of range:', err);
 });
 
-// Handle interrupt signal and close consumer
-process.on('SIGINT', function () {
-  consumer.close(true, function () {
-    process.exit();
-  });
+process.on('SIGINT', async function () {
+  await closeConsumer();
+  process.exit();
 });
 
-// Function to send AI response to Kafka
+function closeConsumer() {
+  return new Promise((resolve) => {
+    consumer.close(true, resolve);
+  });
+}
+
 function sendMessageToKafka(topic, payload) {
   const userMessagePayload = [
     {
@@ -62,23 +60,23 @@ function sendMessageToKafka(topic, payload) {
     },
   ];
 
-  kafkaProducer.send(userMessagePayload, (error, data) => {
-    if (error) {
-      console.error(`Error publishing message to Kafka topic ${topic}:`, error);
-    } else {
-      console.log(`Message successfully published to Kafka topic ${topic}:`, data);
-    }
+  return new Promise((resolve, reject) => {
+    kafkaProducer.send(userMessagePayload, (error, data) => {
+      if (error) {
+        console.error(`Error publishing message to Kafka topic ${topic}:`, error);
+        reject(error);
+      } else {
+        console.log(`Message successfully published to Kafka topic ${topic}:`, data);
+        resolve(data);
+      }
+    });
   });
 }
 
-// Frontend ChatBot function
 async function frontEndchatBot(req, res) {
   try {
     const { message, userId } = req.body;
-
-    // Send user response to Kafka
-    sendMessageToKafka('user_messages', { userId, message });
-
+    await sendMessageToKafka('user_messages', { userId, message });
     res.json({ success: true, message: 'Message sent from user to Kafka' });
   } catch (error) {
     console.error('Error in frontEndchatBot:', error);
@@ -96,6 +94,5 @@ async function getAiResponseFromKafka(req, res) {
   }
 }
 
-
-
 module.exports = { frontEndchatBot, getAiResponseFromKafka };
+ 
