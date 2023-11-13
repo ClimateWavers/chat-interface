@@ -60,6 +60,8 @@ The Chat Interface Microservice in the ClimateWavers application serves as the c
   ```json
   {
     "message": "Your message content"
+  "userId": "e9d11e91-2db8-4ae9-ab62-367f278cc1ed",
+  "userLocation": {"latitude": 40.73061, "longitude": -73.935242}
   }
   ```
 
