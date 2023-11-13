@@ -11,7 +11,8 @@ const port = process.env.PORT || 3003;
 app.use(express.json()); 
 app.use(bodyParser.json()); 
 app.use(express.urlencoded({ extended: true })); 
-app.use('api/', routes);
+
+app.use('/api', routes);
 
 app.use((err, req, res, next) => {
   console.error('Error:', err); 
