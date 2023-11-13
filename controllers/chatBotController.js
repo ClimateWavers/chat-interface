@@ -96,6 +96,6 @@ async function getAiResponseFromKafka(req, res) {
   }
 }
 
-// ... (remaining code)
+
 
 module.exports = { frontEndchatBot, getAiResponseFromKafka };
