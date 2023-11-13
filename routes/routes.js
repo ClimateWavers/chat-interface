@@ -1,5 +1,5 @@
 const express = require('express');
-const { frontEndchatBot, getAiResponseFromKafka } = require('../controllers/chatBotController');
+const { frontEndchatBot, receiveAIResponseHandler } = require('../controllers/chatBotController');
 
 const router = express.Router();
 
@@ -7,6 +7,6 @@ const router = express.Router();
 router.post('/chat', frontEndchatBot);
 
 // Endpoint to get the last AI response from Kafka
-router.get('/ai-response', getAiResponseFromKafka);
+router.get('/ai-response/:userId', receiveAIResponseHandler);
 
 module.exports = router;

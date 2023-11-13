@@ -25,15 +25,11 @@ const consumer = new kafka.ConsumerGroup(consumerOptions, ['ai_responses']);
 
 console.log('Kafka consumer is listening for messages...');
 
-consumer.on('error', async function (err) {
+consumer.on('error', (err) => {
   console.error('Error:', err);
 });
 
-consumer.on('offsetOutOfRange', async function (err) {
-  console.error('Offset out of range:', err);
-});
-
-process.on('SIGINT', async function () {
+process.on('SIGINT', async () => {
   await closeConsumer();
   process.exit();
 });
@@ -65,11 +61,76 @@ function sendMessageToKafka(topic, payload) {
   });
 }
 
+async function receiveAIResponse(userId) {
+  return new Promise((resolve, reject) => {
+    const aiResponsePayload = [
+      {
+        topic: 'ai_responses',
+        offset: 0,
+        partition: 0,
+        maxNum: 1,
+      },
+    ];
+
+    kafkaClient.loadMetadataForTopics(['ai_responses'], (error) => {
+      if (error) {
+        console.error('Error loading metadata for topics:', error);
+        reject(error);
+        return;
+      }
+
+      kafkaClient.fetchOffsets(aiResponsePayload, (error, data) => {
+        if (error) {
+          console.error('Error fetching offset for AI response:', error);
+          reject(error);
+        } else {
+          const latestOffset = data['ai_responses'][0]['0'][0];
+          const aiResponseOptions = {
+            topic: 'ai_responses',
+            partition: 0,
+            offset: latestOffset,
+            maxBytes: 1024 * 1024,
+          };
+
+          const aiResponseStream = kafkaClient.getOffsetStream(aiResponseOptions);
+          const messages = [];
+
+          aiResponseStream.on('data', (message) => {
+            messages.push(message.value);
+          });
+
+          aiResponseStream.on('end', () => {
+            const latestAIResponse = messages.length > 0 ? JSON.parse(messages[0]) : null;
+            resolve(latestAIResponse);
+          });
+
+          aiResponseStream.on('error', (error) => {
+            console.error('Error streaming AI response:', error);
+            reject(error);
+          });
+        }
+      });
+    });
+  });
+}
+
+async function receiveAIResponseHandler(req, res) {
+  try {
+    const { userId } = req.params;
+
+    const latestAIResponse = await receiveAIResponse(userId);
+
+    res.json({ success: true, latestAIResponse });
+  } catch (error) {
+    console.error('Error in receiveAIResponseHandler:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
 async function frontEndchatBot(req, res) {
   try {
     const { message, userId, userLocation } = req.body;
 
-    // Assuming sendMessageToKafka returns a promise
     await sendMessageToKafka('user_messages', { userId, message, userLocation });
 
     res.json({ success: true, message: 'Message sent from user to Kafka' });
@@ -78,46 +139,5 @@ async function frontEndchatBot(req, res) {
     res.status(500).json({ error: 'Internal server error' });
   }
 }
-const receivedResponses = []; // Define an array to store AI responses
 
-async function getAiResponseFromKafka(req, res) {
-  try {
-    // Pause the consumer to prevent further messages while fetching the latest
-    consumer.pause();
-
-    // Consume the latest message directly from Kafka using the existing consumer
-    const latestResponse = await consumeLatestMessageFromKafka('ai_responses');
-
-    // Store the response in the array
-    receivedResponses.push(latestResponse);
-
-    // Keep only the latest 10 responses (you can adjust this based on your needs)
-    if (receivedResponses.length > 10) {
-      receivedResponses.shift(); // Remove the oldest response
-    }
-
-    // Resume the consumer after fetching the latest message
-    consumer.resume();
-
-    res.json({ aiResponse: latestResponse });
-  } catch (error) {
-    console.error('Error in getAiResponseFromKafka:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-}
-
-// Modify the consumeLatestMessageFromKafka function to resolve with the receivedResponses array
-function consumeLatestMessageFromKafka(topic) {
-  return new Promise((resolve, reject) => {
-    const tempConsumer = new kafka.ConsumerGroup(consumerOptions, [topic]);
-
-    tempConsumer.on('message', (message) => {
-      const response = JSON.parse(message.value);
-      tempConsumer.close(true, () => resolve(response));
-    });
-
-    tempConsumer.on('error', (err) => {
-      tempConsumer.close(true, () => reject(err));
-    });
-  });
-}module.exports = { frontEndchatBot, getAiResponseFromKafka };
+module.exports = { frontEndchatBot, receiveAIResponseHandler };
