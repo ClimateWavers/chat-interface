@@ -1,4 +1,5 @@
-const { KafkaClient, ConsumerGroup } = require('kafka-node');
+const { KafkaClient, ConsumerGroup, Offset } = require('kafka-node');
+const { EventEmitter } = require('events');
 
 const kafkaClient = new KafkaClient({
   kafkaHost: 'zkless-kafka-bootstrap:9092',
@@ -13,67 +14,43 @@ const consumerOptions = {
 
 const consumer = new ConsumerGroup(consumerOptions, ['ai_responses']);
 
-async function receiveAIResponse(userId) {
-  return new Promise((resolve, reject) => {
-    const aiResponsePayload = [
-      {
-        topic: 'ai_responses',
-        offset: 0,
-        partition: 0,
-        maxNum: 1,
-      },
-    ];
+const aiResponseEmitter = new EventEmitter();
 
-    kafkaClient.loadMetadataForTopics(['ai_responses'], (error) => {
-      if (error) {
-        console.error('Error loading metadata for topics:', error.message);
-        reject(error);
-        return;
-      }
+// Subscribe to the AI response event outside the request handler
+const aiResponseListener = (aiResponse) => {
+  // Log the received message for debugging
+  console.log('Received AI response:', aiResponse);
+  aiResponseEmitter.emit('aiResponse', aiResponse);
+};
 
-      kafkaClient.fetchOffsets(aiResponsePayload, (error, data) => {
-        if (error) {
-          console.error('Error fetching offset for AI response:', error.message);
-          reject(error);
-        } else {
-          const latestOffset = data['ai_responses'][0]['0'][0];
-          const aiResponseOptions = {
-            topic: 'ai_responses',
-            partition: 0,
-            offset: latestOffset,
-            maxBytes: 1024 * 1024,
-          };
+consumer.on('message', (message) => {
+  // Emit the AI response event when a message is received
+  const parsedMessage = JSON.parse(message.value);
+  aiResponseListener(parsedMessage);
+});
 
-          const aiResponseStream = kafkaClient.getOffsetStream(aiResponseOptions);
-          const messages = [];
-
-          aiResponseStream.on('data', (message) => {
-            messages.push(message.value);
-          });
-
-          aiResponseStream.on('end', () => {
-            const latestAIResponse = messages.length > 0 ? JSON.parse(messages[0]) : null;
-            resolve(latestAIResponse);
-          });
-
-          aiResponseStream.on('error', (error) => {
-            console.error('Error streaming AI response:', error.message);
-            reject(error);
-          });
-        }
-      });
-    });
-  });
-}
+consumer.on('error', (error) => {
+  console.error('Error in Kafka Consumer:', error);
+});
 
 async function receiveAIResponseHandler(req, res) {
   try {
     const { userId } = req.params;
-    console.log(`Fetching AI response for User ID: ${userId}`);
 
-    const latestAIResponse = await receiveAIResponse(userId);
+    // Subscribe to the AI response event
+    const aiResponseListener = (aiResponse) => {
+      if (aiResponse.userId === userId) {
+        // Unsubscribe from the event after receiving the expected response
+        aiResponseEmitter.removeListener('aiResponse', aiResponseListener);
+        res.json({ success: true, latestAIResponse: aiResponse });
+      }
+    };
 
-    res.json({ success: true, latestAIResponse });
+    // Log the initiation of the listener
+    console.log(`Listening for AI response for User ID: ${userId}`);
+
+    // Listen for the AI response event
+    aiResponseEmitter.on('aiResponse', aiResponseListener);
   } catch (error) {
     console.error('Error in receiveAIResponseHandler:', error);
     res.status(500).json({ error: 'Internal server error' });
