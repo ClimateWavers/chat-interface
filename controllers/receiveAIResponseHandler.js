@@ -31,7 +31,12 @@ consumer.on('error', (error) => {
 
 async function receiveAIResponseHandler(req, res) {
   try {
-    const { userId } = req.params;
+    const { userId } = req.body; // Extract userId from the request body
+
+    if (!userId) {
+      // Handle the case where userId is missing in the request body
+      return res.status(400).json({ error: 'User ID is required in the request body' });
+    }
 
     // Subscribe to the AI response event
     const aiResponseListener = (aiResponse) => {
