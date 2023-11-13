@@ -75,14 +75,18 @@ function sendMessageToKafka(topic, payload) {
 
 async function frontEndchatBot(req, res) {
   try {
-    const { message, userId } = req.body;
-    await sendMessageToKafka('user_messages', { userId, message });
+    const { message, userId, userLocation } = req.body;
+
+    // Assuming sendMessageToKafka returns a promise
+    await sendMessageToKafka('user_messages', { userId, message, userLocation });
+
     res.json({ success: true, message: 'Message sent from user to Kafka' });
   } catch (error) {
     console.error('Error in frontEndchatBot:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 }
+
 
 async function getAiResponseFromKafka(req, res) {
   try {
