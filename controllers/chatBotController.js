@@ -21,7 +21,7 @@ const consumerOptions = {
   autoCommitIntervalMs: 5000,
 };
 
-const consumer = new kafka.ConsumerGroup(consumerOptions, ['ai_response']);
+const consumer = new kafka.ConsumerGroup(consumerOptions, ['ai_responses']);
 
 console.log('Kafka consumer is listening for messages...');
 
@@ -86,7 +86,7 @@ async function getAiResponseFromKafka(req, res) {
     consumer.pause();
 
     // Consume the latest message directly from Kafka using the existing consumer
-    const latestResponse = await consumeLatestMessageFromKafka('ai_response');
+    const latestResponse = await consumeLatestMessageFromKafka('ai_responses');
 
     // Store the response in the array
     receivedResponses.push(latestResponse);
