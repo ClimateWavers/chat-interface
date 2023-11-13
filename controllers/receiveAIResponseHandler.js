@@ -16,13 +16,17 @@ const consumer = new ConsumerGroup(consumerOptions, ['ai_responses']);
 
 const aiResponseEmitter = new EventEmitter();
 
+// Subscribe to the AI response event outside the request handler
+const aiResponseListener = (aiResponse) => {
+  // Log the received message for debugging
+  console.log('Received AI response:', aiResponse);
+  aiResponseEmitter.emit('aiResponse', aiResponse);
+};
+
 consumer.on('message', (message) => {
   // Emit the AI response event when a message is received
   const parsedMessage = JSON.parse(message.value);
-  aiResponseEmitter.emit('aiResponse', parsedMessage);
-
-  // Log the received message for debugging
-  console.log('Received AI response:', parsedMessage);
+  aiResponseListener(parsedMessage);
 });
 
 consumer.on('error', (error) => {
@@ -31,12 +35,7 @@ consumer.on('error', (error) => {
 
 async function receiveAIResponseHandler(req, res) {
   try {
-    const { userId } = req.body; // Extract userId from the request body
-
-    if (!userId) {
-      // Handle the case where userId is missing in the request body
-      return res.status(400).json({ error: 'User ID is required in the request body' });
-    }
+    const { userId } = req.params;
 
     // Subscribe to the AI response event
     const aiResponseListener = (aiResponse) => {
