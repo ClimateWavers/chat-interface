@@ -1,7 +1,7 @@
 const kafka = require('kafka-node');
 
 const kafkaClient = new kafka.KafkaClient({
-  kafkaHost: 'zkless-kafka-bootstrap:9092',
+  kafkaHost: `${process.env.KAFKA_HOST}:9092`,
 });
 
 const kafkaProducer = new kafka.Producer(kafkaClient);
