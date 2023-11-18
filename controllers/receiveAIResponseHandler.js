@@ -2,11 +2,11 @@ const { KafkaClient, ConsumerGroup, Offset } = require('kafka-node');
 const { EventEmitter } = require('events');
 
 const kafkaClient = new KafkaClient({
-  kafkaHost: 'zkless-kafka-bootstrap:9092',
+  kafkaHost: `${process.env.KAFKA_HOST}:9092`,
 });
 
 const consumerOptions = {
-  kafkaHost: 'zkless-kafka-bootstrap:9092',
+  kafkaHost: `${process.env.KAFKA_HOST}:9092`,
   groupId: 'group_1',
   autoCommit: true,
   autoCommitIntervalMs: 5000,
