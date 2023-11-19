@@ -30,7 +30,7 @@ The Chat Interface Microservice in the ClimateWavers application serves as the c
    Create a `.env` file and configure the following variables:
 
    ```env
-   KAFKA_BROKER_URL=your_kafka_broker_url
+   KAFKA_HOST=your_kafka_broker_url
    KAFKA_TOPIC=your_kafka_topic
    ```
 
