@@ -42,7 +42,7 @@ async function receiveAIResponseHandler(req, res) {
       if (aiResponse.userId === userId) {
         // Unsubscribe from the event after receiving the expected response
         aiResponseEmitter.removeListener('aiResponse', aiResponseListener);
-        res.json({ success: true, latestAIResponse: aiResponse });
+        return res.json({ success: true, latestAIResponse: aiResponse });
       }
     };
 
@@ -53,7 +53,7 @@ async function receiveAIResponseHandler(req, res) {
     aiResponseEmitter.on('aiResponse', aiResponseListener);
   } catch (error) {
     console.error('Error in receiveAIResponseHandler:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 }
 
