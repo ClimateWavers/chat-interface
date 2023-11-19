@@ -8,11 +8,7 @@ const app = express();
 const port = process.env.PORT || 3003;
 
 // Middleware setup
-app.use(
-  cors({
-    origin: "*",
-  })
-);
+app.use(cors());
 app.use(express.json());
 app.use(bodyParser.json());
 app.use(express.urlencoded({ extended: true }));
