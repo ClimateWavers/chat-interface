@@ -56,7 +56,7 @@ async function receiveAIResponseHandler(req, res) {
     console.log(`Listening for AI response for User ID: ${userId}`);
 
     // Listen for the AI response event
-    aiResponseEmitter.on('aiResponse', aiResponseListener);
+    return aiResponseEmitter.on('aiResponse', aiResponseListener);
 
   } catch (error) {
     console.error('Error in receiveAIResponseHandler:', error);
