@@ -43,6 +43,7 @@ async function receiveAIResponseHandler(req, res) {
       if (aiResponse.userId === userId) {
         // Clear the timeout
         clearTimeout(timeoutId);
+		console.log(aiResponse)
 
         // Unsubscribe from the event after receiving the expected response
         aiResponseEmitter.removeListener('aiResponse', aiResponseListener);
